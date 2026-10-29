@@ -13,6 +13,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <style>
     :root {
       --bg:#F7F1E8; --bg-soft:#FBF7F0; --panel:#fff; --border:#E8DFD0;
@@ -45,6 +46,11 @@
     .cat-chip{flex-shrink:0;padding:7px 14px;border-radius:999px;border:1.5px solid var(--border);background:var(--panel);font-size:.8rem;color:var(--muted);cursor:pointer;white-space:nowrap}
     .cat-chip.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;box-shadow:0 2px 8px rgba(232,168,124,.35)}
 
+    .search-wrap{padding:0 0 10px}
+    .search-box{width:100%;padding:10px 14px 10px 36px;border-radius:999px;border:1.5px solid var(--border);background:var(--panel);color:var(--text);font-size:.88rem;outline:none;font-family:inherit;box-shadow:var(--shadow-sm)}
+    .search-box:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+    .search-field{position:relative}
+    .search-field .ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:.9rem;opacity:.55;pointer-events:none}
     .toolbar{display:flex;align-items:center;justify-content:space-between;padding:0 0 10px}
     .toolbar .count{font-size:.8rem;color:var(--muted)}
     .toolbar .count strong{color:var(--accent-dark)}
@@ -235,6 +241,10 @@
         <button class="btn" id="btnCloseSettings">關閉</button>
       </div>
       <p class="status-bar" id="statusBar" style="margin-top:10px">notepad_data → id = photos</p>
+      <div class="field" style="margin-top:10px">
+        <label>分享哪個分類</label>
+        <select id="shareCatSelect" style="width:100%;padding:11px 13px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg-soft);color:var(--text);font-size:.9rem;font-family:inherit"></select>
+      </div>
       <div id="shareResult" style="display:none;margin-top:10px">
         <div class="field"><label>唯讀分享連結（無法刪改）</label></div>
         <div class="share-box" id="shareUrl"></div>
@@ -242,6 +252,12 @@
       </div>
     </div>
     <div class="cats" id="categoryTabs"></div>
+    <div class="search-wrap">
+      <div class="search-field">
+        <span class="ico">🔍</span>
+        <input type="search" class="search-box" id="searchBox" placeholder="搜尋備註、分類…" enterkeyhint="search" />
+      </div>
+    </div>
     <div class="toolbar">
       <div class="count">共 <strong id="photoCount">0</strong> 張</div>
     </div>
@@ -296,8 +312,6 @@
             <button type="button" class="shape-chip active" data-shape="square">正方形</button>
             <button type="button" class="shape-chip" data-shape="rect">長方形</button>
             <button type="button" class="shape-chip" data-shape="circle">圓形</button>
-            <button type="button" class="shape-chip" data-shape="heart">心形</button>
-            <button type="button" class="shape-chip" data-shape="star">星形</button>
           </div>
         </div>
         <div class="crop-stage" id="cropStage"><img id="cropImg" alt="" /><div class="crop-frame square" id="cropFrame"></div></div>
@@ -400,7 +414,7 @@
   }catch(e){ window.__sbInitError=e; }
 
   var appData={photos:[],categories:DEFAULT_CATS.slice(),shareToken:null};
-  var remoteUpdatedAt=null, loadOk=false, currentFilter='全部', currentPhoto=null;
+  var remoteUpdatedAt=null, loadOk=false, currentFilter='全部', currentPhoto=null, searchQuery='';
   var selectedFiles=[], uploadMaxW=1600, uploadCat='生活', editCat='生活';
   var selectMode=false, selectedIds={};
   var viewerList=[], viewerIndex=0;
@@ -569,11 +583,19 @@
   }
   function getFiltered(){
     var list = appData.photos;
-    // 分享模式鎖定分類
     var filter = currentFilter;
     if(isShareMode && shareCatParam && shareCatParam !== '全部') filter = shareCatParam;
-    if(filter === '全部') return list;
-    return list.filter(function(p){ return p.category === filter; });
+    if(filter !== '全部') list = list.filter(function(p){ return p.category === filter; });
+    var q = (searchQuery || '').trim().toLowerCase();
+    if(q){
+      list = list.filter(function(p){
+        var note = (p.note || '').toLowerCase();
+        var cat = (p.category || '').toLowerCase();
+        var d = (p.created_at || '').toLowerCase();
+        return note.indexOf(q) >= 0 || cat.indexOf(q) >= 0 || d.indexOf(q) >= 0;
+      });
+    }
+    return list;
   }
 
   function renderPillCats(containerId, selected, onPick){
@@ -719,21 +741,6 @@
     ctx.beginPath();
     if(cropShape==='circle'){
       ctx.arc(outW/2, outH/2, Math.min(outW,outH)/2, 0, Math.PI*2);
-    } else if(cropShape==='heart'){
-      var x=outW/2, y=outH/2, s=Math.min(outW,outH)/2.1;
-      ctx.moveTo(x, y+s*0.7);
-      ctx.bezierCurveTo(x-s*1.2, y+s*0.1, x-s*1.2, y-s*0.6, x, y-s*0.35);
-      ctx.bezierCurveTo(x+s*1.2, y-s*0.6, x+s*1.2, y+s*0.1, x, y+s*0.7);
-      ctx.closePath();
-    } else if(cropShape==='star'){
-      var cx=outW/2, cy=outH/2, r=Math.min(outW,outH)/2, ri=r*0.4;
-      for(var i=0;i<10;i++){
-        var a=-Math.PI/2 + i*Math.PI/5;
-        var rad=(i%2===0)?r:ri;
-        var px=cx+Math.cos(a)*rad, py=cy+Math.sin(a)*rad;
-        if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-      }
-      ctx.closePath();
     } else {
       ctx.rect(0,0,outW,outH);
     }
@@ -771,23 +778,87 @@
   })();
 
   // download helpers
+  function triggerBlobDownload(blob, filename){
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=filename||'download.bin';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+  }
   async function downloadUrl(url, filename){
     try{
-      var res=await fetch(url); var blob=await res.blob();
-      var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename||'photo.jpg';
-      document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
+      var res=await fetch(url);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      var blob=await res.blob();
+      triggerBlobDownload(blob, filename||'photo.jpg');
     }catch(e){
-      // fallback open
       var a=document.createElement('a'); a.href=url; a.download=filename||'photo.jpg'; a.target='_blank'; a.click();
     }
   }
+  async function fetchPhotoBlob(photo){
+    // 支援雲端 URL 與離線 local blob URL
+    var res=await fetch(photo.url);
+    if(!res.ok) throw new Error('無法下載');
+    return await res.blob();
+  }
+  function safeName(s){
+    return String(s||'photo').replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_').slice(0,40);
+  }
   async function batchDownload(ids){
-    toast('開始下載 '+ids.length+' 張…',2000,'info');
-    for(var i=0;i<ids.length;i++){
-      var p=appData.photos.find(function(x){return x.id===ids[i];});
-      if(p) await downloadUrl(p.url, (p.category||'photo')+'_'+(i+1)+'.jpg');
+    ids = (ids||[]).filter(Boolean);
+    if(!ids.length){ toast('尚未選取', 2000, 'info'); return; }
+
+    // 單張：直接下載，不打包
+    if(ids.length === 1){
+      var one=appData.photos.find(function(x){return x.id===ids[0];});
+      if(!one) return;
+      toast('下載中…', 1500, 'info');
+      try{
+        await downloadUrl(one.url, safeName(one.category||'photo')+'.jpg');
+        toast('下載完成', 1800, 'ok');
+      }catch(e){ toast('下載失敗', 3000, 'err'); }
+      return;
     }
-    toast('下載完成',2000,'ok');
+
+    if(typeof JSZip === 'undefined'){
+      toast('ZIP 元件未載入，改為逐張下載', 2500, 'err');
+      for(var i=0;i<ids.length;i++){
+        var p=appData.photos.find(function(x){return x.id===ids[i];});
+        if(p) await downloadUrl(p.url, safeName(p.category||'photo')+'_'+(i+1)+'.jpg');
+      }
+      return;
+    }
+
+    toast('打包 ZIP 中（'+ids.length+' 張）…', 2500, 'info');
+    var zip = new JSZip();
+    var folderName = '收藏本本';
+    var ok=0, fail=0;
+    for(var i=0;i<ids.length;i++){
+      var photo=appData.photos.find(function(x){return x.id===ids[i];});
+      if(!photo){ fail++; continue; }
+      try{
+        var blob=await fetchPhotoBlob(photo);
+        var cat=safeName(photo.category||'未分類');
+        var base=safeName((photo.note||'').slice(0,12) || ('photo_'+(i+1)));
+        var fname=cat+'/'+base+'_'+(i+1)+'.jpg';
+        // 避免重名
+        if(zip.file(fname)) fname=cat+'/'+base+'_'+(i+1)+'_'+String(photo.id).slice(0,6)+'.jpg';
+        zip.file(fname, blob);
+        ok++;
+      }catch(e){ console.warn(e); fail++; }
+    }
+    if(!ok){ toast('沒有成功下載的相片', 3000, 'err'); return; }
+    try{
+      var zipBlob=await zip.generateAsync({type:'blob', compression:'DEFLATE', compressionOptions:{level:6}});
+      var stamp=new Date();
+      var zname='收藏本本_'+stamp.getFullYear()+String(stamp.getMonth()+1).padStart(2,'0')+String(stamp.getDate()).padStart(2,'0')+'_'+ok+'張.zip';
+      triggerBlobDownload(zipBlob, zname);
+      toast('已下載 ZIP（'+ok+' 張'+(fail?('，失敗 '+fail):'')+'）', 2800, 'ok');
+    }catch(e){
+      toast('ZIP 產生失敗：'+((e&&e.message)||e), 3500, 'err');
+    }
   }
 
   async function deletePhoto(photo){
@@ -864,22 +935,22 @@
     }
     return appData.shareToken;
   }
+  function fillShareCatSelect(){
+    ensureCategories();
+    var sel = document.getElementById('shareCatSelect');
+    if(!sel) return;
+    var opts = ['全部'].concat(appData.categories.filter(function(c){ return c !== '全部'; }));
+    var cur = sel.value || currentFilter;
+    sel.innerHTML = opts.map(function(c){
+      return '<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c)+'</option>';
+    }).join('');
+  }
   async function doShare(){
     if(isShareMode) return;
     try{
-      ensureCategories();
-      var opts = ['全部'].concat(appData.categories.filter(function(c){ return c !== '全部'; }));
-      // 用 soft dialog 選分類：列出名稱請使用者輸入，或用 prompt 選目前分類
-      var pick = await softPrompt(
-        '輸入要分享的分類名稱（或輸入「全部」）\n目前分類：' + currentFilter + '\n可選：' + opts.join('、'),
-        { title: '分享分類', icon: '🔗', value: currentFilter, okText: '產生連結' }
-      );
-      if(pick == null) return;
-      var cat = String(pick).trim() || '全部';
-      if(cat !== '全部' && !appData.categories.includes(cat)){
-        toast('找不到分類「' + cat + '」', 2500, 'err');
-        return;
-      }
+      fillShareCatSelect();
+      var sel = document.getElementById('shareCatSelect');
+      var cat = (sel && sel.value) ? sel.value : (currentFilter || '全部');
       var token = await ensureShareToken();
       var q = '?share=' + encodeURIComponent(token) + '&cat=' + encodeURIComponent(cat);
       var url = location.origin + location.pathname.replace(/\/[^/]*$/,'/') + q;
@@ -990,9 +1061,19 @@
   window.addEventListener('offline',setOnlineUI);
 
   // events
-  document.getElementById('btnSettings').onclick=function(){document.getElementById('settingsPanel').classList.toggle('open');};
+  document.getElementById('btnSettings').onclick=function(){var p=document.getElementById('settingsPanel');p.classList.toggle('open'); if(p.classList.contains('open')) fillShareCatSelect();};
   document.getElementById('btnCloseSettings').onclick=function(){document.getElementById('settingsPanel').classList.remove('open');};
   document.getElementById('btnRefresh').onclick=function(){loadData();};
+  var searchBox=document.getElementById('searchBox');
+  if(searchBox){
+    var searchTimer=null;
+    searchBox.addEventListener('input', function(){
+      var v=searchBox.value;
+      clearTimeout(searchTimer);
+      searchTimer=setTimeout(function(){ searchQuery=v; render(); }, 180);
+    });
+  }
+
   document.getElementById('btnTest').onclick=async function(){
     try{if(!supabase) throw new Error('SDK 未載入');var r=await withTimeout(Promise.resolve(supabase.from('notepad_data').select('id').eq('id',DATA_ID).maybeSingle()),8000);if(r.error) throw r.error;toast('連線成功',2000,'ok');}catch(e){toast('連線失敗：'+((e&&e.message)||e),4000,'err');}
   };
@@ -1006,6 +1087,7 @@
   document.getElementById('btnDownloadCat').onclick=async function(){
     var list=getFiltered(); if(!list.length){toast('本分類沒有照片',2000,'info');return;}
     document.getElementById('settingsPanel').classList.remove('open');
+    // 多於 1 張會自動打包 ZIP
     await batchDownload(list.map(function(p){return p.id;}));
   };
 
@@ -1088,48 +1170,68 @@
   if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){});});}
 
 
-  // 下拉釋放更新（主流手勢）
+  // 下拉釋放更新：僅在頁面頂端、明確向下拉、且沒有橫向滑動時觸發
   (function initPullRefresh(){
-    var startY=0, pulling=false, dy=0;
+    var startY=0, startX=0, pulling=false, dy=0, dx=0, tracking=false;
     var ind=document.getElementById('pullInd');
-    var THRESH=72;
-    function atTop(){ return (window.scrollY||document.documentElement.scrollTop||0) <= 2; }
+    var THRESH=90; // 需拉得更明顯
+    function atTop(){ return (window.scrollY||document.documentElement.scrollTop||0) <= 0; }
     function setInd(msg, show){
       if(!ind) return;
-      ind.textContent = msg;
+      ind.textContent = msg || '下拉更新';
       if(show) ind.classList.add('show'); else ind.classList.remove('show');
     }
     document.addEventListener('touchstart', function(e){
-      if(!atTop() || document.getElementById('viewerModal').classList.contains('open')) { pulling=false; return; }
+      tracking=false; pulling=false; dy=0; dx=0;
       if(e.touches.length!==1) return;
+      if(!atTop()) return;
+      if(document.getElementById('viewerModal').classList.contains('open')) return;
+      if(document.getElementById('uploadModal') && document.getElementById('uploadModal').classList.contains('open')) return;
+      if(document.getElementById('cropModal') && document.getElementById('cropModal').classList.contains('open')) return;
+      if(document.getElementById('editModal') && document.getElementById('editModal').classList.contains('open')) return;
+      if(document.body.classList.contains('select-mode')) return;
       startY = e.touches[0].clientY;
-      pulling = true; dy = 0;
+      startX = e.touches[0].clientX;
+      // 只在畫面頂部 80px 內開始的觸控才算「下拉更新」意圖
+      if(startY > 80 + (parseInt(getComputedStyle(document.documentElement).getPropertyValue('padding-top'),10)||0)) return;
+      // fixed header 區域附近
+      if(startY > 120) return;
+      tracking = true;
     }, {passive:true});
     document.addEventListener('touchmove', function(e){
-      if(!pulling) return;
+      if(!tracking) return;
       dy = e.touches[0].clientY - startY;
-      if(dy > 24 && atTop()){
+      dx = e.touches[0].clientX - startX;
+      // 橫向移動較大 → 當一般捲動，取消
+      if(Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy) * 0.7){
+        tracking=false; pulling=false; setInd('', false); return;
+      }
+      if(dy > 30 && atTop() && Math.abs(dy) > Math.abs(dx) * 1.4){
+        pulling = true;
         if(dy >= THRESH) setInd('放開以更新', true);
         else setInd('下拉更新', true);
       } else {
+        pulling = false;
         setInd('', false);
       }
     }, {passive:true});
     document.addEventListener('touchend', function(){
-      if(!pulling) return;
-      var should = pulling && dy >= THRESH && atTop();
-      pulling = false; dy = 0;
+      var should = tracking && pulling && dy >= THRESH && atTop() && Math.abs(dy) > Math.abs(dx) * 1.4;
+      tracking=false; pulling=false;
+      var keepDy=dy; dy=0; dx=0;
       if(should){
         setInd('更新中…', true);
+        // 記住捲動位置（雖然在頂端）
         Promise.resolve(loadData()).then(function(){
           setInd('已更新', true);
-          setTimeout(function(){ setInd('', false); }, 700);
+          setTimeout(function(){ setInd('', false); }, 600);
         }).catch(function(){ setInd('', false); });
       } else {
         setInd('', false);
       }
     }, {passive:true});
   })();
+
 
   setOnlineUI();
   loadData();
