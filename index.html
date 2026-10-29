@@ -756,7 +756,7 @@
     selectedFiles[cropIdx].previewUrl=URL.createObjectURL(blob);
     renderPreview(); closeCrop(); toast('已套用裁剪',1800,'ok');
   }
-  (function initCropGestures(function initCropGestures(){
+  (function initCropGestures(){
     var stage=document.getElementById('cropStage'); if(!stage) return; var st=null;
     stage.addEventListener('touchstart',function(e){
       if(e.touches.length===2){e.preventDefault();var dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;st={mode:'pinch',dist:Math.sqrt(dx*dx+dy*dy),scale:cropState.scale};}
