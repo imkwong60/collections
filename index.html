@@ -148,6 +148,64 @@
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
 
+
+    .photo-item .check {
+      position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid #fff; background: rgba(0,0,0,.25); display: none;
+      align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700;
+    }
+    body.select-mode .photo-item .check { display: flex; }
+    .photo-item.selected .check { background: var(--accent); }
+    .photo-item.selected::after {
+      content: ''; position: absolute; inset: 0; background: rgba(232,168,124,.28); pointer-events: none;
+    }
+    body.select-mode .fab { display: none; }
+    .select-bar {
+      position: fixed; left: 50%; transform: translateX(-50%); bottom: 0;
+      width: 100%; max-width: 480px; z-index: 50;
+      background: var(--panel); border-top: 1.5px solid var(--border);
+      padding: 12px 16px max(14px, env(safe-area-inset-bottom));
+      display: none; align-items: center; gap: 10px;
+      box-shadow: 0 -4px 20px rgba(74,63,53,.08);
+    }
+    body.select-mode .select-bar { display: flex; }
+    .select-bar .sel-count { flex: 1; font-size: .9rem; font-weight: 600; }
+    .pick-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .size-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .size-chip {
+      padding: 8px 12px; border-radius: 999px; border: 1.5px solid var(--border);
+      background: var(--panel); font-size: .78rem; color: var(--muted); cursor: pointer;
+    }
+    .size-chip.active {
+      background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600;
+    }
+    .upload-preview .thumb .ops {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      display: flex; background: rgba(0,0,0,.55);
+    }
+    .upload-preview .thumb .ops button {
+      flex: 1; border: none; background: transparent; color: #fff;
+      font-size: .7rem; padding: 6px 2px; cursor: pointer;
+    }
+    #cropModal.modal { justify-content: center; padding: 12px; background: rgba(0,0,0,.85); }
+    #cropModal .modal-sheet { max-height: 96dvh; border-radius: 16px; background: #1a1a1a; color: #fff; }
+    #cropModal .modal-header { background: #222; border-color: #333; color: #fff; }
+    #cropModal .modal-header .close { background: #333; border-color: #444; color: #fff; }
+    .crop-stage {
+      position: relative; width: 100%; aspect-ratio: 1; background: #000;
+      overflow: hidden; border-radius: 8px; touch-action: none;
+    }
+    .crop-stage img {
+      position: absolute; left: 50%; top: 50%; transform-origin: center center;
+      max-width: none; user-select: none; -webkit-user-drag: none; pointer-events: none;
+    }
+    .crop-frame {
+      position: absolute; inset: 8%; border: 2px solid rgba(255,255,255,.9);
+      box-shadow: 0 0 0 9999px rgba(0,0,0,.45); pointer-events: none;
+    }
+    .crop-tools { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .crop-tools .btn { background: #333; border-color: #555; color: #eee; }
+
     .empty, .loading {
       text-align: center; padding: 56px 16px; color: var(--muted);
     }
@@ -458,6 +516,12 @@
 
   <button class="fab" id="fabUpload" title="新增照片">＋</button>
 
+  <div class="select-bar" id="selectBar">
+    <div class="sel-count" id="selCount">已選 0 張</div>
+    <button class="btn" id="btnCancelSelect">取消</button>
+    <button class="btn danger" id="btnBatchDelete">刪除</button>
+  </div>
+
   <!-- Upload -->
   <div class="modal" id="uploadModal">
     <div class="modal-sheet">
@@ -466,11 +530,28 @@
         <button class="close" id="uploadClose">✕</button>
       </div>
       <div class="modal-body">
-        <label class="file-input-btn">
-          <input type="file" id="fileInput" accept="image/*" multiple capture="environment" hidden />
-          <span>點擊選擇／拍照</span>
-        </label>
+        <div class="pick-row">
+          <label class="file-input-btn">
+            <input type="file" id="fileCamera" accept="image/*" capture="environment" multiple hidden />
+            <span style="font-size:1.5rem">📸</span>
+            <span>拍照</span>
+          </label>
+          <label class="file-input-btn">
+            <input type="file" id="fileAlbum" accept="image/*" multiple hidden />
+            <span style="font-size:1.5rem">🖼</span>
+            <span>相簿</span>
+          </label>
+        </div>
         <div class="upload-preview" id="preview"></div>
+        <div class="field">
+          <label>輸出尺寸</label>
+          <div class="size-chips" id="sizeChips">
+            <button type="button" class="size-chip" data-w="800">小 800</button>
+            <button type="button" class="size-chip" data-w="1200">中 1200</button>
+            <button type="button" class="size-chip active" data-w="1600">大 1600</button>
+            <button type="button" class="size-chip" data-w="2048">超清 2048</button>
+          </div>
+        </div>
         <div class="field">
           <label>分類</label>
           <select id="uploadCategory"></select>
@@ -484,6 +565,32 @@
           <div class="progress-bar"><div id="progressBar"></div></div>
         </div>
         <button class="btn primary" id="btnDoUpload" style="width:100%;padding:13px;font-size:0.95rem" disabled>上傳到雲端</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Crop editor -->
+  <div class="modal" id="cropModal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="title">旋轉／裁剪</div>
+        <button class="close" id="cropClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="crop-stage" id="cropStage">
+          <img id="cropImg" alt="" />
+          <div class="crop-frame"></div>
+        </div>
+        <div class="crop-tools">
+          <button type="button" class="btn" id="cropRotL">↺ 左轉</button>
+          <button type="button" class="btn" id="cropRotR">↻ 右轉</button>
+          <button type="button" class="btn" id="cropZoomIn">＋</button>
+          <button type="button" class="btn" id="cropZoomOut">－</button>
+          <button type="button" class="btn" id="cropReset">重設</button>
+        </div>
+        <p style="font-size:.72rem;color:#aaa;text-align:center">雙指縮放／拖曳，框內為裁剪範圍</p>
+        <button class="btn primary" id="cropApply" style="width:100%;padding:13px">套用</button>
       </div>
     </div>
   </div>
@@ -586,6 +693,14 @@
   let currentFilter = '全部';
   let currentPhoto = null;
   let selectedFiles = [];
+  let uploadMaxW = 1600;
+  let selectMode = false;
+  let selectedIds = {};
+  let viewerList = [];
+  let viewerIndex = 0;
+  let cropIdx = -1;
+  let cropState = { scale: 1, x: 0, y: 0, rot: 0, natW: 0, natH: 0, baseScale: 1 };
+
 
   // ---------- utils ----------
   function esc(s) {
@@ -680,7 +795,7 @@
 
   // ---------- compress ----------
   function compressImage(file, maxWidth, quality) {
-    maxWidth = maxWidth || 1600;
+    maxWidth = maxWidth || uploadMaxW || 1600;
     quality = quality || 0.82;
     return new Promise(function (resolve, reject) {
       const img = new Image();
@@ -878,7 +993,7 @@
       const item = selectedFiles[i];
       try {
         txt.textContent = '壓縮並上傳 ' + (i + 1) + '/' + total + '…';
-        const blob = item.blob || await compressImage(item.file);
+        const blob = await compressImage(item.blob || item.file, uploadMaxW);
         const fileName = Date.now() + '_' + Math.random().toString(36).slice(2, 9) + '.jpg';
         const up = await supabase.storage
           .from(BUCKET)
@@ -1095,25 +1210,26 @@
     }).join('') +
       '<button type="button" class="cat-chip manage" id="btnManageCat">管理</button>';
 
-    const filtered = currentFilter === '全部'
-      ? appData.photos
-      : appData.photos.filter(function (p) { return p.category === currentFilter; });
+    const filtered = getFiltered();
 
     document.getElementById('photoCount').textContent = filtered.length;
 
     const grid = document.getElementById('photoGrid');
     const empty = document.getElementById('emptyState');
 
+    updateSelCount();
     if (!filtered.length) {
       grid.innerHTML = '';
-      empty.style.display = 'block';
+      empty.style.display = selectMode ? 'none' : 'block';
     } else {
       empty.style.display = 'none';
       grid.innerHTML = filtered.map(function (p) {
         const badge = (p.category && p.category !== '全部')
           ? '<span class="badge-cat">' + esc(p.category) + '</span>' : '';
-        return '<div class="photo-item" data-id="' + esc(p.id) + '">' +
-          '<img src="' + esc(p.url) + '" alt="" loading="lazy" />' + badge + '</div>';
+        var sel = selectedIds[p.id] ? ' selected' : '';
+        return '<div class="photo-item' + sel + '" data-id="' + esc(p.id) + '">' +
+          '<img src="' + esc(p.url) + '" alt="" loading="lazy" />' +
+          '<span class="check">' + (selectedIds[p.id] ? '✓' : '') + '</span>' + badge + '</div>';
       }).join('');
     }
   }
@@ -1181,11 +1297,12 @@
           return;
         }
         touchState = {
-          mode: 'pan',
+          mode: vz.scale > 1.05 ? 'pan' : 'swipe',
           startX: e.touches[0].clientX,
           startY: e.touches[0].clientY,
           startTx: vz.x, startTy: vz.y,
-          lastTap: now
+          lastTap: now,
+          moved: false
         };
       }
     }, { passive: false });
@@ -1206,6 +1323,11 @@
         vz.x = touchState.startTx + dx;
         vz.y = touchState.startTy + dy;
         applyViewerTransform();
+        touchState.moved = true;
+      } else if (touchState.mode === 'swipe' && e.touches.length === 1) {
+        var adx = Math.abs(e.touches[0].clientX - touchState.startX);
+        var ady = Math.abs(e.touches[0].clientY - touchState.startY);
+        if (adx > 12 || ady > 12) touchState.moved = true;
       }
     }, { passive: false });
 
@@ -1213,8 +1335,15 @@
       if (e.touches.length < 2 && touchState && touchState.mode === 'pinch') {
         touchState = null;
       }
-      if (e.touches.length === 0 && touchState && touchState.mode === 'pan') {
-        // 保留 lastTap 供雙擊
+      if (e.touches.length === 0 && touchState) {
+        if (touchState.mode === 'swipe' && touchState.moved && e.changedTouches && e.changedTouches.length) {
+          var dx = e.changedTouches[0].clientX - touchState.startX;
+          var dy = e.changedTouches[0].clientY - touchState.startY;
+          if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.2 && viewerList.length > 1) {
+            if (dx < 0) showViewerAt(viewerIndex + 1);
+            else showViewerAt(viewerIndex - 1);
+          }
+        }
         var lt = touchState.lastTap;
         touchState = { lastTap: lt };
       }
@@ -1232,7 +1361,17 @@
   }
 
   function openViewer(photo) {
-    currentPhoto = photo;
+    viewerList = getFiltered();
+    viewerIndex = viewerList.findIndex(function (p) { return p.id === photo.id; });
+    if (viewerIndex < 0) { viewerList = [photo]; viewerIndex = 0; }
+    showViewerAt(viewerIndex);
+    document.getElementById('viewerModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function showViewerAt(idx) {
+    if (!viewerList.length) return;
+    viewerIndex = (idx + viewerList.length) % viewerList.length;
+    currentPhoto = viewerList[viewerIndex];
     resetViewerTransform();
     initViewerGestures();
     var img = document.getElementById('viewerImg');
@@ -1240,21 +1379,15 @@
       img.style.display = 'none';
       var wrap = img.parentElement;
       var err = wrap.querySelector('.viewer-err');
-      if (!err) {
-        err = document.createElement('div');
-        err.className = 'viewer-err';
-        wrap.appendChild(err);
-      }
-      err.textContent = '圖片無法載入（可能已被刪除）';
+      if (!err) { err = document.createElement('div'); err.className = 'viewer-err'; wrap.appendChild(err); }
+      err.textContent = '圖片無法載入';
     };
     img.onload = function () { img.style.display = ''; };
     img.style.display = '';
     var oldErr = img.parentElement.querySelector('.viewer-err');
     if (oldErr) oldErr.remove();
-    img.src = photo.url;
+    img.src = currentPhoto.url;
     updateViewerInfo();
-    document.getElementById('viewerModal').classList.add('open');
-    document.body.style.overflow = 'hidden';
   }
 
   function updateViewerInfo() {
@@ -1263,7 +1396,7 @@
     info.innerHTML = '';
     var tag = document.createElement('span');
     tag.className = 'cat-tag';
-    tag.textContent = currentPhoto.category || '未分類';
+    tag.textContent = (currentPhoto.category || '未分類') + (viewerList.length > 1 ? ('  ·  ' + (viewerIndex + 1) + '/' + viewerList.length) : '');
     info.appendChild(tag);
     var note = document.createElement('div');
     note.textContent = currentPhoto.note || '（無備註）';
@@ -1315,10 +1448,181 @@
     const box = document.getElementById('preview');
     box.innerHTML = selectedFiles.map(function (f, i) {
       return '<div class="thumb"><img src="' + f.previewUrl + '" alt="" />' +
-        '<button type="button" class="rm" data-i="' + i + '">×</button></div>';
+        '<button type="button" class="rm" data-i="' + i + '">×</button>' +
+        '<div class="ops">' +
+          '<button type="button" data-act="rot" data-i="' + i + '">旋轉</button>' +
+          '<button type="button" data-act="crop" data-i="' + i + '">裁剪</button>' +
+        '</div></div>';
     }).join('');
     document.getElementById('btnDoUpload').disabled = !selectedFiles.length;
   }
+
+  function rotateBlob(blob, deg) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(blob);
+      var img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var canvas = document.createElement('canvas');
+        var rad = (deg % 360) * Math.PI / 180;
+        var w = img.width, h = img.height;
+        var cos = Math.abs(Math.cos(rad)), sin = Math.abs(Math.sin(rad));
+        canvas.width = Math.round(w * cos + h * sin);
+        canvas.height = Math.round(w * sin + h * cos);
+        var ctx = canvas.getContext('2d');
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(rad);
+        ctx.drawImage(img, -w / 2, -h / 2);
+        canvas.toBlob(function (b) {
+          if (b) resolve(b); else reject(new Error('旋轉失敗'));
+        }, 'image/jpeg', 0.92);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('讀取失敗')); };
+      img.src = url;
+    });
+  }
+
+  function openCrop(i) {
+    cropIdx = i;
+    var item = selectedFiles[i];
+    if (!item) return;
+    var img = document.getElementById('cropImg');
+    img.onload = function () {
+      cropState = { scale: 1, x: 0, y: 0, rot: 0, natW: img.naturalWidth, natH: img.naturalHeight, baseScale: 1 };
+      fitCropImage();
+    };
+    img.src = item.previewUrl;
+    document.getElementById('cropModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function fitCropImage() {
+    var stage = document.getElementById('cropStage');
+    var sw = stage.clientWidth, sh = stage.clientHeight;
+    var nw = cropState.natW, nh = cropState.natH;
+    if (cropState.rot % 180 !== 0) { var t = nw; nw = nh; nh = t; }
+    var fw = sw * 0.84, fh = sh * 0.84;
+    cropState.baseScale = Math.max(fw / nw, fh / nh);
+    applyCropTransform();
+  }
+  function applyCropTransform() {
+    var img = document.getElementById('cropImg');
+    var s = cropState.baseScale * cropState.scale;
+    img.style.width = cropState.natW + 'px';
+    img.style.height = cropState.natH + 'px';
+    img.style.transform = 'translate(-50%,-50%) translate(' + cropState.x + 'px,' + cropState.y + 'px) rotate(' + cropState.rot + 'deg) scale(' + s + ')';
+  }
+  function closeCrop() {
+    document.getElementById('cropModal').classList.remove('open');
+    document.body.style.overflow = '';
+    cropIdx = -1;
+  }
+  async function applyCrop() {
+    if (cropIdx < 0) return;
+    var stage = document.getElementById('cropStage');
+    var sw = stage.clientWidth;
+    var fw = sw * 0.84;
+    var outSize = 1200;
+    var canvas = document.createElement('canvas');
+    canvas.width = outSize; canvas.height = outSize;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, outSize, outSize);
+    var img = document.getElementById('cropImg');
+    var s = cropState.baseScale * cropState.scale;
+    var k = outSize / fw;
+    ctx.save();
+    ctx.translate(outSize / 2, outSize / 2);
+    ctx.rotate(cropState.rot * Math.PI / 180);
+    var drawW = cropState.natW * s * k;
+    var drawH = cropState.natH * s * k;
+    ctx.drawImage(img, -drawW / 2 + cropState.x * k, -drawH / 2 + cropState.y * k, drawW, drawH);
+    ctx.restore();
+    var blob = await new Promise(function (resolve, reject) {
+      canvas.toBlob(function (b) { if (b) resolve(b); else reject(new Error('裁剪失敗')); }, 'image/jpeg', 0.92);
+    });
+    if (selectedFiles[cropIdx].previewUrl) URL.revokeObjectURL(selectedFiles[cropIdx].previewUrl);
+    selectedFiles[cropIdx].blob = blob;
+    selectedFiles[cropIdx].previewUrl = URL.createObjectURL(blob);
+    renderPreview();
+    closeCrop();
+    toast('已套用裁剪', 1800, 'ok');
+  }
+  (function initCropGestures() {
+    var stage = document.getElementById('cropStage');
+    if (!stage) return;
+    var st = null;
+    stage.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        var dx = e.touches[0].clientX - e.touches[1].clientX;
+        var dy = e.touches[0].clientY - e.touches[1].clientY;
+        st = { mode: 'pinch', dist: Math.sqrt(dx*dx+dy*dy), scale: cropState.scale };
+      } else if (e.touches.length === 1) {
+        st = { mode: 'pan', x: e.touches[0].clientX, y: e.touches[0].clientY, tx: cropState.x, ty: cropState.y };
+      }
+    }, { passive: false });
+    stage.addEventListener('touchmove', function (e) {
+      if (!st) return;
+      e.preventDefault();
+      if (st.mode === 'pinch' && e.touches.length >= 2) {
+        var dx = e.touches[0].clientX - e.touches[1].clientX;
+        var dy = e.touches[0].clientY - e.touches[1].clientY;
+        var d = Math.sqrt(dx*dx+dy*dy);
+        cropState.scale = Math.min(5, Math.max(0.5, st.scale * (d / st.dist)));
+        applyCropTransform();
+      } else if (st.mode === 'pan' && e.touches.length === 1) {
+        cropState.x = st.tx + (e.touches[0].clientX - st.x);
+        cropState.y = st.ty + (e.touches[0].clientY - st.y);
+        applyCropTransform();
+      }
+    }, { passive: false });
+    stage.addEventListener('touchend', function () { st = null; }, { passive: true });
+  })();
+
+  function getFiltered() {
+    return currentFilter === '全部' ? appData.photos
+      : appData.photos.filter(function (p) { return p.category === currentFilter; });
+  }
+  function enterSelectMode(id) {
+    selectMode = true; selectedIds = {};
+    if (id) selectedIds[id] = true;
+    document.body.classList.add('select-mode');
+    render();
+  }
+  function exitSelectMode() {
+    selectMode = false; selectedIds = {};
+    document.body.classList.remove('select-mode');
+    render();
+  }
+  function updateSelCount() {
+    var n = Object.keys(selectedIds).filter(function (k) { return selectedIds[k]; }).length;
+    var el = document.getElementById('selCount');
+    if (el) el.textContent = '已選 ' + n + ' 張';
+  }
+  async function batchDelete() {
+    var ids = Object.keys(selectedIds).filter(function (id) { return selectedIds[id]; });
+    if (!ids.length) { toast('尚未選取', 2000, 'info'); return; }
+    if (!loadOk) { toast('禁止寫入', 3000, 'err'); return; }
+    var ok = await softConfirm('確定刪除選取的 ' + ids.length + ' 張？', { title: '批量刪除', icon: '🗑️', okText: '刪除' });
+    if (!ok) return;
+    try {
+      var paths = [];
+      appData.photos.forEach(function (p) {
+        if (selectedIds[p.id]) {
+          var path = p.path || (p.url && p.url.split('/photos/')[1]);
+          if (path) paths.push(path);
+        }
+      });
+      if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
+      appData.photos = appData.photos.filter(function (p) { return !selectedIds[p.id]; });
+      await saveData();
+      exitSelectMode();
+      render();
+      toast('已刪除 ' + ids.length + ' 張', 2200, 'ok');
+    } catch (err) {
+      toast('刪除失敗：' + ((err && err.message) || err), 3500, 'err');
+    }
+  }
+
 
   // ---------- events ----------
   document.getElementById('btnSettings').onclick = function () {
@@ -1373,7 +1677,13 @@
   document.getElementById('photoGrid').addEventListener('click', function (e) {
     const item = e.target.closest('.photo-item');
     if (!item) return;
-    const photo = appData.photos.find(function (p) { return p.id === item.getAttribute('data-id'); });
+    const id = item.getAttribute('data-id');
+    if (selectMode) {
+      selectedIds[id] = !selectedIds[id];
+      render();
+      return;
+    }
+    const photo = appData.photos.find(function (p) { return p.id === id; });
     if (photo) openViewer(photo);
   });
 
@@ -1381,33 +1691,104 @@
   document.getElementById('uploadClose').onclick = closeUpload;
   document.getElementById('btnDoUpload').onclick = doUpload;
 
-  document.getElementById('fileInput').addEventListener('change', async function (e) {
-    const files = Array.prototype.slice.call(e.target.files || []);
-    e.target.value = '';
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+  async function addFilesFromInput(fileList) {
+    var files = Array.prototype.slice.call(fileList || []);
+    for (var i = 0; i < files.length; i++) {
+      var file = files[i];
       if (!file.type || file.type.indexOf('image/') !== 0) continue;
       try {
-        const blob = await compressImage(file);
-        const previewUrl = URL.createObjectURL(blob);
+        var blob = await compressImage(file, 2400, 0.92);
+        var previewUrl = URL.createObjectURL(blob);
         selectedFiles.push({ file: file, blob: blob, previewUrl: previewUrl });
       } catch (err) {
-        toast('壓縮失敗：' + ((err && err.message) || err), 3000, 'err');
+        toast('處理失敗：' + ((err && err.message) || err), 3000, 'err');
       }
     }
     renderPreview();
+  }
+  document.getElementById('fileCamera').addEventListener('change', function (e) {
+    addFilesFromInput(e.target.files); e.target.value = '';
+  });
+  document.getElementById('fileAlbum').addEventListener('change', function (e) {
+    addFilesFromInput(e.target.files); e.target.value = '';
+  });
+  document.getElementById('sizeChips').addEventListener('click', function (e) {
+    var chip = e.target.closest('.size-chip');
+    if (!chip) return;
+    uploadMaxW = parseInt(chip.getAttribute('data-w'), 10) || 1600;
+    document.querySelectorAll('.size-chip').forEach(function (c) {
+      c.classList.toggle('active', c === chip);
+    });
   });
 
   document.getElementById('preview').addEventListener('click', function (e) {
-    const btn = e.target.closest('.rm');
-    if (!btn) return;
-    const i = +btn.getAttribute('data-i');
-    if (selectedFiles[i] && selectedFiles[i].previewUrl) {
-      URL.revokeObjectURL(selectedFiles[i].previewUrl);
+    var rm = e.target.closest('.rm');
+    if (rm) {
+      var i = +rm.getAttribute('data-i');
+      if (selectedFiles[i] && selectedFiles[i].previewUrl) URL.revokeObjectURL(selectedFiles[i].previewUrl);
+      selectedFiles.splice(i, 1);
+      renderPreview();
+      return;
     }
-    selectedFiles.splice(i, 1);
-    renderPreview();
+    var btn = e.target.closest('[data-act]');
+    if (!btn) return;
+    var idx = +btn.getAttribute('data-i');
+    var act = btn.getAttribute('data-act');
+    if (act === 'rot') {
+      rotateBlob(selectedFiles[idx].blob, 90).then(function (b) {
+        if (selectedFiles[idx].previewUrl) URL.revokeObjectURL(selectedFiles[idx].previewUrl);
+        selectedFiles[idx].blob = b;
+        selectedFiles[idx].previewUrl = URL.createObjectURL(b);
+        renderPreview();
+      }).catch(function (err) { toast(String(err.message || err), 3000, 'err'); });
+    } else if (act === 'crop') {
+      openCrop(idx);
+    }
   });
+
+  document.getElementById('cropClose').onclick = closeCrop;
+  document.getElementById('cropApply').onclick = applyCrop;
+  document.getElementById('cropRotL').onclick = function () {
+    cropState.rot = (cropState.rot - 90 + 360) % 360; fitCropImage();
+  };
+  document.getElementById('cropRotR').onclick = function () {
+    cropState.rot = (cropState.rot + 90) % 360; fitCropImage();
+  };
+  document.getElementById('cropZoomIn').onclick = function () {
+    cropState.scale = Math.min(5, cropState.scale * 1.15); applyCropTransform();
+  };
+  document.getElementById('cropZoomOut').onclick = function () {
+    cropState.scale = Math.max(0.5, cropState.scale / 1.15); applyCropTransform();
+  };
+  document.getElementById('cropReset').onclick = function () {
+    cropState.scale = 1; cropState.x = 0; cropState.y = 0; cropState.rot = 0; fitCropImage();
+  };
+  document.getElementById('btnCancelSelect').onclick = exitSelectMode;
+  document.getElementById('btnBatchDelete').onclick = batchDelete;
+
+  // long-press multi-select
+  (function () {
+    var lpTimer = null, lpId = null;
+    var grid = document.getElementById('photoGrid');
+    grid.addEventListener('touchstart', function (e) {
+      var item = e.target.closest('.photo-item');
+      if (!item) return;
+      lpId = item.getAttribute('data-id');
+      lpTimer = setTimeout(function () {
+        lpTimer = null;
+        if (!selectMode) enterSelectMode(lpId);
+        else { selectedIds[lpId] = !selectedIds[lpId]; render(); }
+        if (navigator.vibrate) navigator.vibrate(20);
+      }, 480);
+    }, { passive: true });
+    grid.addEventListener('touchmove', function () {
+      if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+    }, { passive: true });
+    grid.addEventListener('touchend', function () {
+      if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+    }, { passive: true });
+  })();
+
 
   document.getElementById('viewerBack').onclick = closeViewer;
   document.getElementById('viewerRotate').onclick = rotateViewer;
@@ -1446,6 +1827,15 @@
       navigator.serviceWorker.register('./sw.js').catch(function () {});
     });
   }
+
+  function onOrientationChange() {
+    if (!document.getElementById('viewerModal').classList.contains('open')) return;
+    setTimeout(function () { vz.x = 0; vz.y = 0; applyViewerTransform(); }, 150);
+  }
+  window.addEventListener('orientationchange', onOrientationChange);
+  window.addEventListener('resize', function () {
+    if (document.getElementById('viewerModal').classList.contains('open')) onOrientationChange();
+  });
 
   loadData();
 })();
