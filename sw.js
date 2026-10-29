@@ -1,4 +1,4 @@
-const CACHE = 'photo-album-v2';
+const CACHE = 'photo-album-v3';
 const ASSETS = [
   './',
   './index.html',
