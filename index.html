@@ -146,8 +146,22 @@
     .crop-frame{position:absolute;inset:8%;border:2px solid rgba(255,255,255,.95);box-shadow:0 0 0 9999px #000;pointer-events:none}
     .crop-frame.circle{border-radius:50%}
     .crop-frame.rect{inset:12% 8%;border-radius:4px}
-    .crop-frame.heart,.crop-frame.star{border:none;box-shadow:none;background:transparent;inset:8%}
-    .crop-frame.heart::before{content:'';position:absolute;inset:0;background:#000;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 88 C20 65 5 45 5 30 C5 15 15 8 28 8 C38 8 46 14 50 22 C54 14 62 8 72 8 C85 8 95 15 95 30 C95 45 80 65 50 88Z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 88 C20 65 5 45 5 30 C5 15 15 8 28 8 C38 8 46 14 50 22 C54 14 62 8 72 8 C85 8 95 15 95 30 C95 45 80 65 50 88Z'/%3E%3C/svg%3E") center/contain no-repeat}
+    .crop-frame.heart,.crop-frame.star{
+      border:none; box-shadow:none; inset:0; border-radius:0;
+      background:#000;
+      -webkit-mask-size: 84% 84%; mask-size: 84% 84%;
+      -webkit-mask-position: center; mask-position: center;
+      -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+      -webkit-mask-mode: alpha; mask-mode: alpha;
+    }
+    .crop-frame.heart{
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='white'/%3E%3Cpath fill='black' d='M50 86 C22 64 8 46 8 30 C8 16 18 8 30 8 C40 8 47 14 50 22 C53 14 60 8 70 8 C82 8 92 16 92 30 C92 46 78 64 50 86Z'/%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='white'/%3E%3Cpath fill='black' d='M50 86 C22 64 8 46 8 30 C8 16 18 8 30 8 C40 8 47 14 50 22 C53 14 60 8 70 8 C82 8 92 16 92 30 C92 46 78 64 50 86Z'/%3E%3C/svg%3E");
+    }
+    .crop-frame.star{
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='white'/%3E%3Cpolygon fill='black' points='50,8 61,38 94,38 67,58 77,90 50,72 23,90 33,58 6,38 39,38'/%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='white'/%3E%3Cpolygon fill='black' points='50,8 61,38 94,38 67,58 77,90 50,72 23,90 33,58 6,38 39,38'/%3E%3C/svg%3E");
+    }
     .crop-tools{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
     .crop-tools .btn{background:#333;border-color:#555;color:#eee}
 
@@ -210,7 +224,7 @@
       </div>
     </div>
     <div class="offline-badge" id="offlineBadge">離線模式 · 變更會在連線後同步</div>
-    <div class="pull-ind" id="pullInd">放開並按住以更新…</div>
+    <div class="pull-ind" id="pullInd">下拉更新</div>
     <div class="settings-panel" id="settingsPanel">
       <h3>選項</h3>
       <div class="settings-actions">
@@ -329,7 +343,7 @@
       <div class="viewer-topbar">
         <button type="button" class="btn-back" id="viewerBack">←</button>
         <span class="spacer"></span>
-        <button type="button" id="viewerRotate">↻</button>
+        <button type="button" id="viewerRotate" title="旋轉">⟳ 旋轉</button>
         <button type="button" class="btn-edit" id="viewerEditBtn">⋯</button>
       </div>
       <div class="viewer-bar"><div class="viewer-info" id="viewerInfo"></div></div>
@@ -686,43 +700,63 @@
   function closeCrop(){document.getElementById('cropModal').classList.remove('open');document.body.style.overflow='';cropIdx=-1;}
   async function applyCrop(){
     if(cropIdx<0) return;
-    var stage=document.getElementById('cropStage'); var sw=stage.clientWidth, sh=stage.clientHeight;
-    var fw=sw*0.84, fh=sh*0.84; if(cropShape==='rect'){fw=sw*0.84;fh=sh*0.64;}
-    var outW=1200, outH=cropShape==='rect'?Math.round(1200*(fh/fw)):1200;
-    var canvas=document.createElement('canvas'); canvas.width=outW; canvas.height=outH;
+    var stage=document.getElementById('cropStage');
+    var sw=stage.clientWidth, sh=stage.clientHeight;
+    var fw=sw*0.84, fh=sh*0.84;
+    if(cropShape==='rect'){ fw=sw*0.84; fh=sh*0.64; }
+    var outW=1200;
+    var outH = (cropShape==='rect') ? Math.round(1200*(fh/fw)) : 1200;
+    var canvas=document.createElement('canvas');
+    canvas.width=outW; canvas.height=outH;
     var ctx=canvas.getContext('2d');
-    // clip shape
+
+    // 先鋪黑色底（形狀外永遠是黑）
+    ctx.fillStyle='#000';
+    ctx.fillRect(0,0,outW,outH);
+
+    // 形狀裁切路徑
     ctx.save();
     ctx.beginPath();
-    if(cropShape==='circle'){ctx.arc(outW/2,outH/2,Math.min(outW,outH)/2,0,Math.PI*2);}
-    else if(cropShape==='heart'){
-      var s=Math.min(outW,outH); ctx.translate(outW/2,outH/2); ctx.scale(s/100,s/100);
-      ctx.moveTo(0,28); ctx.bezierCurveTo(-30,0,-45,-20,-45,-35); ctx.bezierCurveTo(-45,-50,-30,-58,-15,-58);
-      ctx.bezierCurveTo(-5,-58,0,-50,0,-45); ctx.bezierCurveTo(0,-50,5,-58,15,-58);
-      ctx.bezierCurveTo(30,-58,45,-50,45,-35); ctx.bezierCurveTo(45,-20,30,0,0,28); ctx.translate(-outW/2,-outH/2);
+    if(cropShape==='circle'){
+      ctx.arc(outW/2, outH/2, Math.min(outW,outH)/2, 0, Math.PI*2);
+    } else if(cropShape==='heart'){
+      var x=outW/2, y=outH/2, s=Math.min(outW,outH)/2.1;
+      ctx.moveTo(x, y+s*0.7);
+      ctx.bezierCurveTo(x-s*1.2, y+s*0.1, x-s*1.2, y-s*0.6, x, y-s*0.35);
+      ctx.bezierCurveTo(x+s*1.2, y-s*0.6, x+s*1.2, y+s*0.1, x, y+s*0.7);
+      ctx.closePath();
     } else if(cropShape==='star'){
-      var cx=outW/2,cy=outH/2,r=Math.min(outW,outH)/2, ri=r*0.4;
-      for(var i=0;i<10;i++){var a=-Math.PI/2+i*Math.PI/5, rad=i%2===0?r:ri; var x=cx+Math.cos(a)*rad,y=cy+Math.sin(a)*rad; if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);} ctx.closePath();
-    } else {ctx.rect(0,0,outW,outH);}
+      var cx=outW/2, cy=outH/2, r=Math.min(outW,outH)/2, ri=r*0.4;
+      for(var i=0;i<10;i++){
+        var a=-Math.PI/2 + i*Math.PI/5;
+        var rad=(i%2===0)?r:ri;
+        var px=cx+Math.cos(a)*rad, py=cy+Math.sin(a)*rad;
+        if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.closePath();
+    } else {
+      ctx.rect(0,0,outW,outH);
+    }
     ctx.clip();
-    var img=document.getElementById('cropImg'); var s=cropState.baseScale*cropState.scale; var k=outW/fw;
-    ctx.translate(outW/2,outH/2); ctx.rotate(cropState.rot*Math.PI/180);
+
+    var img=document.getElementById('cropImg');
+    var s=cropState.baseScale*cropState.scale;
+    var k=outW/fw;
+    ctx.translate(outW/2, outH/2);
+    ctx.rotate(cropState.rot*Math.PI/180);
     var drawW=cropState.natW*s*k, drawH=cropState.natH*s*k;
-    ctx.drawImage(img,-drawW/2+cropState.x*k,-drawH/2+cropState.y*k,drawW,drawH);
+    ctx.drawImage(img, -drawW/2+cropState.x*k, -drawH/2+cropState.y*k, drawW, drawH);
     ctx.restore();
-    // for transparent shapes fill white bg outside already clipped content on jpeg - use white bg first
-    // already drew clipped; for jpeg no alpha - fill bg under
+
     var blob=await new Promise(function(resolve,reject){
-      // composite on white
-      var c2=document.createElement('canvas'); c2.width=outW; c2.height=outH;
-      var x2=c2.getContext('2d'); x2.fillStyle='#fff'; x2.fillRect(0,0,outW,outH); x2.drawImage(canvas,0,0);
-      c2.toBlob(function(b){if(b)resolve(b);else reject(new Error('裁剪失敗'));},'image/jpeg',0.92);
+      canvas.toBlob(function(b){ if(b) resolve(b); else reject(new Error('裁剪失敗')); }, 'image/jpeg', 0.92);
     });
     if(selectedFiles[cropIdx].previewUrl) URL.revokeObjectURL(selectedFiles[cropIdx].previewUrl);
-    selectedFiles[cropIdx].blob=blob; selectedFiles[cropIdx].previewUrl=URL.createObjectURL(blob);
+    selectedFiles[cropIdx].blob=blob;
+    selectedFiles[cropIdx].previewUrl=URL.createObjectURL(blob);
     renderPreview(); closeCrop(); toast('已套用裁剪',1800,'ok');
   }
-  (function initCropGestures(){
+  (function initCropGestures(function initCropGestures(){
     var stage=document.getElementById('cropStage'); if(!stage) return; var st=null;
     stage.addEventListener('touchstart',function(e){
       if(e.touches.length===2){e.preventDefault();var dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;st={mode:'pinch',dist:Math.sqrt(dx*dx+dy*dy),scale:cropState.scale};}
@@ -1054,44 +1088,47 @@
   if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){});});}
 
 
-  // 下拉並保持不動 = 重新載入
+  // 下拉釋放更新（主流手勢）
   (function initPullRefresh(){
-    var startY = 0, pulling = false, holdTimer = null, armed = false;
-    var ind = document.getElementById('pullInd');
-    function atTop(){ return window.scrollY <= 2 || document.documentElement.scrollTop <= 2; }
+    var startY=0, pulling=false, dy=0;
+    var ind=document.getElementById('pullInd');
+    var THRESH=72;
+    function atTop(){ return (window.scrollY||document.documentElement.scrollTop||0) <= 2; }
+    function setInd(msg, show){
+      if(!ind) return;
+      ind.textContent = msg;
+      if(show) ind.classList.add('show'); else ind.classList.remove('show');
+    }
     document.addEventListener('touchstart', function(e){
-      if(!atTop() || document.getElementById('viewerModal').classList.contains('open')) return;
-      if(e.touches.length !== 1) return;
+      if(!atTop() || document.getElementById('viewerModal').classList.contains('open')) { pulling=false; return; }
+      if(e.touches.length!==1) return;
       startY = e.touches[0].clientY;
-      pulling = true; armed = false;
-      clearTimeout(holdTimer);
-    }, { passive: true });
+      pulling = true; dy = 0;
+    }, {passive:true});
     document.addEventListener('touchmove', function(e){
       if(!pulling) return;
-      var dy = e.touches[0].clientY - startY;
-      if(dy > 70 && atTop()){
-        armed = true;
-        if(ind){ ind.textContent = '保持不動以更新…'; ind.classList.add('show'); }
-        clearTimeout(holdTimer);
-        holdTimer = setTimeout(function(){
-          if(!armed) return;
-          if(ind){ ind.textContent = '更新中…'; }
-          pulling = false; armed = false;
-          loadData().then(function(){
-            if(ind){ ind.textContent = '已更新'; setTimeout(function(){ ind.classList.remove('show'); }, 800); }
-          });
-        }, 650); // 保持不動約 0.65 秒
+      dy = e.touches[0].clientY - startY;
+      if(dy > 24 && atTop()){
+        if(dy >= THRESH) setInd('放開以更新', true);
+        else setInd('下拉更新', true);
       } else {
-        armed = false;
-        clearTimeout(holdTimer);
-        if(ind) ind.classList.remove('show');
+        setInd('', false);
       }
-    }, { passive: true });
+    }, {passive:true});
     document.addEventListener('touchend', function(){
-      pulling = false; armed = false;
-      clearTimeout(holdTimer);
-      if(ind) setTimeout(function(){ ind.classList.remove('show'); }, 300);
-    }, { passive: true });
+      if(!pulling) return;
+      var should = pulling && dy >= THRESH && atTop();
+      pulling = false; dy = 0;
+      if(should){
+        setInd('更新中…', true);
+        Promise.resolve(loadData()).then(function(){
+          setInd('已更新', true);
+          setTimeout(function(){ setInd('', false); }, 700);
+        }).catch(function(){ setInd('', false); });
+      } else {
+        setInd('', false);
+      }
+    }, {passive:true});
   })();
 
   setOnlineUI();
