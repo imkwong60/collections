@@ -64,7 +64,25 @@
     .loading .spinner{width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;margin:0 auto 12px;animation:spin .7s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
 
-    .fab{position:fixed;z-index:45;width:54px;height:54px;border-radius:50%;background:linear-gradient(145deg,#E8A87C,#F2B5C0);color:#fff;border:3px solid #fff;font-size:1.6rem;box-shadow:0 6px 20px rgba(232,168,124,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;right:16px;bottom:max(24px,env(safe-area-inset-bottom)+16px)}@media (min-width:481px){.fab{right:calc(50% - 240px + 16px)}}
+    .fab{
+      position:fixed !important;
+      top:auto !important;
+      left:auto !important;
+      right:16px !important;
+      bottom:24px !important;
+      width:54px;height:54px;border-radius:50%;
+      background:linear-gradient(145deg,#E8A87C,#F2B5C0);color:#fff;
+      border:3px solid #fff;font-size:1.6rem;
+      box-shadow:0 6px 20px rgba(232,168,124,.4);
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;z-index:45;
+    }
+    @supports (bottom: env(safe-area-inset-bottom)) {
+      .fab{ bottom: calc(16px + env(safe-area-inset-bottom)) !important; }
+    }
+    @media (min-width:481px){
+      .fab{ right: calc(50% - 240px + 16px) !important; }
+    }
     .fab:active{transform:scale(.94)}
 
     .select-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:480px;z-index:50;background:var(--panel);border-top:1.5px solid var(--border);padding:12px 16px max(14px,env(safe-area-inset-bottom));display:none;align-items:center;gap:8px;flex-wrap:wrap;box-shadow:0 -4px 20px rgba(74,63,53,.08)}
@@ -125,11 +143,11 @@
     #cropModal .modal-header .close{background:#333;border-color:#444;color:#fff}
     .crop-stage{position:relative;width:100%;aspect-ratio:1;background:#000;overflow:hidden;border-radius:8px;touch-action:none}
     .crop-stage img{position:absolute;left:50%;top:50%;transform-origin:center center;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
-    .crop-frame{position:absolute;inset:8%;border:2px solid rgba(255,255,255,.9);box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none}
+    .crop-frame{position:absolute;inset:8%;border:2px solid rgba(255,255,255,.95);box-shadow:0 0 0 9999px #000;pointer-events:none}
     .crop-frame.circle{border-radius:50%}
     .crop-frame.rect{inset:12% 8%;border-radius:4px}
     .crop-frame.heart,.crop-frame.star{border:none;box-shadow:none;background:transparent;inset:8%}
-    .crop-frame.heart::before{content:'';position:absolute;inset:0;background:rgba(0,0,0,.45);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 88 C20 65 5 45 5 30 C5 15 15 8 28 8 C38 8 46 14 50 22 C54 14 62 8 72 8 C85 8 95 15 95 30 C95 45 80 65 50 88Z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 88 C20 65 5 45 5 30 C5 15 15 8 28 8 C38 8 46 14 50 22 C54 14 62 8 72 8 C85 8 95 15 95 30 C95 45 80 65 50 88Z'/%3E%3C/svg%3E") center/contain no-repeat}
+    .crop-frame.heart::before{content:'';position:absolute;inset:0;background:#000;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 88 C20 65 5 45 5 30 C5 15 15 8 28 8 C38 8 46 14 50 22 C54 14 62 8 72 8 C85 8 95 15 95 30 C95 45 80 65 50 88Z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='white' d='M50 88 C20 65 5 45 5 30 C5 15 15 8 28 8 C38 8 46 14 50 22 C54 14 62 8 72 8 C85 8 95 15 95 30 C95 45 80 65 50 88Z'/%3E%3C/svg%3E") center/contain no-repeat}
     .crop-tools{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
     .crop-tools .btn{background:#333;border-color:#555;color:#eee}
 
@@ -148,6 +166,8 @@
     .status-bar{font-size:.72rem;color:var(--muted);padding:0 2px 8px}
     .status-bar.error{color:var(--danger)}.status-bar.ok{color:#5a9e7a}
     .offline-badge{display:none;font-size:.72rem;background:#fff3cd;color:#856404;padding:4px 10px;border-radius:999px;margin-bottom:8px}
+    .pull-ind{position:fixed;left:50%;top:max(8px,env(safe-area-inset-top));transform:translateX(-50%) translateY(-80px);z-index:60;background:rgba(74,63,53,.88);color:#fff;padding:8px 16px;border-radius:999px;font-size:.8rem;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+    .pull-ind.show{opacity:1;transform:translateX(-50%) translateY(0)}
     body.offline .offline-badge{display:inline-block}
 
     /* Viewer fullscreen translucent */
@@ -190,6 +210,7 @@
       </div>
     </div>
     <div class="offline-badge" id="offlineBadge">離線模式 · 變更會在連線後同步</div>
+    <div class="pull-ind" id="pullInd">放開並按住以更新…</div>
     <div class="settings-panel" id="settingsPanel">
       <h3>選項</h3>
       <div class="settings-actions">
@@ -216,7 +237,7 @@
   <div id="emptyState" class="empty" style="display:none"><div class="emoji">📷</div><p>還沒有照片<br>點右下角 ＋ 開始收藏</p></div>
   <div id="loadingState" class="loading" style="display:none"><div class="spinner"></div><p>載入中…</p></div>
 
-  <button class="fab" id="fabUpload">＋</button>
+  <button class="fab" id="fabUpload" style="position:fixed;right:16px;bottom:24px;top:auto;left:auto">＋</button>
 
   <div class="select-bar" id="selectBar">
     <div class="sel-count" id="selCount">已選 0 張</div>
@@ -354,6 +375,7 @@
 
   var params=new URLSearchParams(location.search);
   var shareTokenParam=params.get('share')||'';
+  var shareCatParam=params.get('cat')||'全部';
   var isShareMode=false;
 
   var supabase=null;
@@ -448,7 +470,12 @@
       if(shareTokenParam){
         if(appData.shareToken && appData.shareToken===shareTokenParam){
           isShareMode=true; document.body.classList.add('share-mode');
-          toast('唯讀分享模式',2000,'info');
+          if(shareCatParam && shareCatParam !== '全部'){
+            currentFilter = shareCatParam;
+          } else {
+            currentFilter = '全部';
+          }
+          toast('唯讀分享：' + currentFilter, 2200, 'info');
         }else{
           toast('分享連結無效或已失效',3500,'err');
         }
@@ -526,7 +553,14 @@
     if(!appData.categories||!appData.categories.length) appData.categories=DEFAULT_CATS.slice();
     if(!appData.categories.includes('全部')) appData.categories.unshift('全部');
   }
-  function getFiltered(){return currentFilter==='全部'?appData.photos:appData.photos.filter(function(p){return p.category===currentFilter;});}
+  function getFiltered(){
+    var list = appData.photos;
+    // 分享模式鎖定分類
+    var filter = currentFilter;
+    if(isShareMode && shareCatParam && shareCatParam !== '全部') filter = shareCatParam;
+    if(filter === '全部') return list;
+    return list.filter(function(p){ return p.category === filter; });
+  }
 
   function renderPillCats(containerId, selected, onPick){
     ensureCategories();
@@ -724,13 +758,16 @@
 
   async function deletePhoto(photo){
     if(isShareMode) return;
-    var ok=await softConfirm('確定刪除這張照片？',{title:'刪除',icon:'🗑️',okText:'刪除'}); if(!ok) return;
+    // 先關閉全螢幕，避免確認框被相片擋住
+    closeViewer();
+    closeActionSheet();
+    var ok=await softConfirm('確定刪除這張照片？',{title:'刪除',icon:'🗑️',okText:'刪除'}); if(!ok){ render(); return; }
     try{
       if(photo.path && online && supabase) await supabase.storage.from(BUCKET).remove([photo.path]);
       appData.photos=appData.photos.filter(function(p){return p.id!==photo.id;});
       if(online&&loadOk) await saveData(); else cacheSave();
-      closeViewer(); render(); toast('已刪除',2000,'ok');
-    }catch(err){toast('刪除失敗：'+((err&&err.message)||err),3500,'err');}
+      render(); toast('已刪除',2000,'ok');
+    }catch(err){toast('刪除失敗：'+((err&&err.message)||err),3500,'err'); render();}
   }
   async function batchDelete(){
     if(isShareMode) return;
@@ -796,15 +833,30 @@
   async function doShare(){
     if(isShareMode) return;
     try{
-      var token=await ensureShareToken();
-      var url=location.origin+location.pathname.replace(/\/[^/]*$/,'/')+'?share='+encodeURIComponent(token);
-      // if file protocol
-      if(location.protocol==='file:') url=location.href.split('?')[0]+'?share='+encodeURIComponent(token);
-      document.getElementById('shareResult').style.display='block';
-      document.getElementById('shareUrl').textContent=url;
-      if(navigator.share){ try{await navigator.share({title:'收藏本本',text:'看看我的相簿',url:url});}catch(_){}}
-      toast('已產生唯讀分享連結',2200,'ok');
-    }catch(e){toast('分享失敗',3000,'err');}
+      ensureCategories();
+      var opts = ['全部'].concat(appData.categories.filter(function(c){ return c !== '全部'; }));
+      // 用 soft dialog 選分類：列出名稱請使用者輸入，或用 prompt 選目前分類
+      var pick = await softPrompt(
+        '輸入要分享的分類名稱（或輸入「全部」）\n目前分類：' + currentFilter + '\n可選：' + opts.join('、'),
+        { title: '分享分類', icon: '🔗', value: currentFilter, okText: '產生連結' }
+      );
+      if(pick == null) return;
+      var cat = String(pick).trim() || '全部';
+      if(cat !== '全部' && !appData.categories.includes(cat)){
+        toast('找不到分類「' + cat + '」', 2500, 'err');
+        return;
+      }
+      var token = await ensureShareToken();
+      var q = '?share=' + encodeURIComponent(token) + '&cat=' + encodeURIComponent(cat);
+      var url = location.origin + location.pathname.replace(/\/[^/]*$/,'/') + q;
+      if(location.protocol === 'file:') url = location.href.split('?')[0] + q;
+      document.getElementById('shareResult').style.display = 'block';
+      document.getElementById('shareUrl').textContent = url;
+      if(navigator.share){
+        try{ await navigator.share({ title: '收藏本本', text: '分享分類：' + cat, url: url }); }catch(_){}
+      }
+      toast('已產生「' + cat + '」唯讀分享連結', 2400, 'ok');
+    }catch(e){ toast('分享失敗', 3000, 'err'); }
   }
 
   // viewer
@@ -812,9 +864,15 @@
   function applyViewerTransform(){var img=document.getElementById('viewerImg'); if(img) img.style.transform='translate('+vz.x+'px,'+vz.y+'px) scale('+vz.scale+') rotate('+vz.rot+'deg)';}
   function resetViewerTransform(){vz.scale=1;vz.x=0;vz.y=0;vz.rot=0;applyViewerTransform();}
   function openViewer(photo){
-    viewerList=getFiltered(); viewerIndex=viewerList.findIndex(function(p){return p.id===photo.id;});
-    if(viewerIndex<0){viewerList=[photo];viewerIndex=0;}
-    showViewerAt(viewerIndex); document.getElementById('viewerModal').classList.add('open'); document.body.style.overflow='hidden';
+    // 左右滑只限「這張照片所屬分類」
+    var cat = photo.category || '';
+    viewerList = appData.photos.filter(function(p){ return (p.category||'') === cat; });
+    if(!viewerList.length) viewerList = [photo];
+    viewerIndex = viewerList.findIndex(function(p){ return p.id === photo.id; });
+    if(viewerIndex < 0){ viewerList = [photo]; viewerIndex = 0; }
+    showViewerAt(viewerIndex);
+    document.getElementById('viewerModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
   }
   function showViewerAt(idx){
     if(!viewerList.length) return;
@@ -986,14 +1044,55 @@
   document.getElementById('viewerEditBtn').onclick=openActionSheet;
   document.getElementById('sheetCancel').onclick=closeActionSheet;
   document.getElementById('viewerActionSheet').addEventListener('click',function(e){if(e.target.id==='viewerActionSheet') closeActionSheet();});
-  document.getElementById('sheetEdit').onclick=function(){closeActionSheet(); if(currentPhoto) openEdit(currentPhoto);};
-  document.getElementById('sheetDelete').onclick=function(){closeActionSheet(); if(currentPhoto) deletePhoto(currentPhoto);};
-  document.getElementById('sheetDownload').onclick=function(){closeActionSheet(); if(currentPhoto) downloadUrl(currentPhoto.url,'photo.jpg');};
+  document.getElementById('sheetEdit').onclick=function(){var p=currentPhoto; closeActionSheet(); closeViewer(); if(p) openEdit(p);};
+  document.getElementById('sheetDelete').onclick=function(){var p=currentPhoto; closeActionSheet(); if(p) deletePhoto(p);};
+  document.getElementById('sheetDownload').onclick=function(){if(currentPhoto) downloadUrl(currentPhoto.url,'photo.jpg'); closeActionSheet();};
   document.getElementById('editClose').onclick=function(){document.getElementById('editModal').classList.remove('open');document.body.style.overflow='';};
   document.getElementById('btnSaveEdit').onclick=saveEdit;
 
   document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&loadOk&&online) loadData();});
   if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){});});}
+
+
+  // 下拉並保持不動 = 重新載入
+  (function initPullRefresh(){
+    var startY = 0, pulling = false, holdTimer = null, armed = false;
+    var ind = document.getElementById('pullInd');
+    function atTop(){ return window.scrollY <= 2 || document.documentElement.scrollTop <= 2; }
+    document.addEventListener('touchstart', function(e){
+      if(!atTop() || document.getElementById('viewerModal').classList.contains('open')) return;
+      if(e.touches.length !== 1) return;
+      startY = e.touches[0].clientY;
+      pulling = true; armed = false;
+      clearTimeout(holdTimer);
+    }, { passive: true });
+    document.addEventListener('touchmove', function(e){
+      if(!pulling) return;
+      var dy = e.touches[0].clientY - startY;
+      if(dy > 70 && atTop()){
+        armed = true;
+        if(ind){ ind.textContent = '保持不動以更新…'; ind.classList.add('show'); }
+        clearTimeout(holdTimer);
+        holdTimer = setTimeout(function(){
+          if(!armed) return;
+          if(ind){ ind.textContent = '更新中…'; }
+          pulling = false; armed = false;
+          loadData().then(function(){
+            if(ind){ ind.textContent = '已更新'; setTimeout(function(){ ind.classList.remove('show'); }, 800); }
+          });
+        }, 650); // 保持不動約 0.65 秒
+      } else {
+        armed = false;
+        clearTimeout(holdTimer);
+        if(ind) ind.classList.remove('show');
+      }
+    }, { passive: true });
+    document.addEventListener('touchend', function(){
+      pulling = false; armed = false;
+      clearTimeout(holdTimer);
+      if(ind) setTimeout(function(){ ind.classList.remove('show'); }, 300);
+    }, { passive: true });
+  })();
 
   setOnlineUI();
   loadData();
