@@ -1,6 +1,6 @@
 {
-  "name": "相冊本本",
-  "short_name": "相冊本本",
+  "name": "收藏本本",
+  "short_name": "收藏本本",
   "description": "iPhone 優化的相簿記錄工具",
   "start_url": "./",
   "display": "standalone",
